@@ -1,7 +1,7 @@
 gpx-sanitize
 ============
 
-A simple GPX "sanitizer": it tries to sort <trkpt/>s elements from <trakseg/> by proximity.
+A simple GPX "sanitizer": it tries to sort &lt;trkpt/&gt;s elements from &lt;trakseg/&gt; by proximity.
 
 Why ?
 =====
