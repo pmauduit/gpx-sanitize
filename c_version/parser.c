@@ -1,34 +1,15 @@
 #include <stdio.h>
-#include <string.h>
-#include <math.h>
-#include <assert.h>
-#include <libgen.h>
-
-#include <libxml/parser.h>
-#include <libxml/tree.h>
-#include <libxml/xpath.h>
-#include <libxml/xpathInternals.h>
 
 #include "sanitizer_util.h"
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846264338327
-#endif // M_PI in C99 is not defined
-
-// 30.0 m/s ~ 108 km/h
-// assuming that a point is recorded every second
-// if points are distant than more than 30 meters
-// should mean that there is an inconsistency in
-// the trace.
-
-#define DISTANCE_THRESHOLD 30.0
+char * input_file_name = NULL;
+static unsigned int anon_trk_idx = 0;
 
 const xmlChar * XP_TRKSEG     = (unsigned char *) "/gpx:gpx/gpx:trk/gpx:trkseg";
 const xmlChar * XP_TRKPT      = (unsigned char *) "gpx:trkpt";
 const xmlChar * XP_TRKPT_TIME = (unsigned char *) "gpx:trkpt/gpx:time";
 const unsigned char * GPX_NS  = (unsigned char *) "http://www.topografix.com/GPX/1/0";
 
-char * input_file_name = NULL;
 
 
 static int is_trkseg_anonymized(xmlNodePtr node, xmlXPathContextPtr ctx) {
@@ -43,102 +24,12 @@ static int is_trkseg_anonymized(xmlNodePtr node, xmlXPathContextPtr ctx) {
   return (nodeNr > 0) ? 0 : 1;
 }
 
-/**
- * Simple distance calculation stolen on the internet,
- * and ported from ruby to C.
- *
- * Takes the coordinates in degrees for the two points,
- * returns a result in meters.
- */
 
-static const float DTOR = M_PI / 180.0;
-static const float EARTH_RADIUS = 6378.14*1000.0;
-
-static unsigned int anon_trk_idx = 0;
-
-static float calculate_dist(float lat1, float long1, float lat2, float long2) {
-
-  float rlat1 = lat1 * DTOR;
-  float rlong1 = long1 * DTOR;
-  float rlat2 = lat2 * DTOR;
-  float rlong2 = long2 * DTOR;
-
-  float dlon = rlong1 - rlong2;
-  float dlat = rlat1 - rlat2;
-
-  float a = pow(sinf(dlat/2.0), 2) + cosf(rlat1) * cosf(rlat2) * pow(sinf(dlon/2.0),2);
-  float c = 2.0 * atan2f(sqrtf(a), sqrtf(1-a));
-  return EARTH_RADIUS * c;
-}
-
-/**
- * gets the value at mtx[i][j].
- */
-inline const float get_indice(float * mtx, int i, int j, int size) {
-  return *((mtx + i * size) + j);
-}
-
-/**
- * Gets the minimum indice of a point.
- * (returns j if j is the closest point from pt)
- */
-const int get_minimum_index(float * mtx, int pt, int size) {
-  float min_dist = -1;
-  int closest_pt = -1 ,i;
-
-  for (i = 0 ; i < size ; i++) {
-    if (i != pt) {
-      float cur_dist = get_indice(mtx, pt,i, size);
-      // initialization
-      if ((closest_pt == -1) && (cur_dist > 0)) {
-        min_dist = cur_dist;
-        closest_pt = i;
-      }
-      // Already initialized, but a closer point is found
-      else if (((cur_dist < min_dist) && (cur_dist > 0))) {
-        min_dist = cur_dist;
-        closest_pt = i;
-      }
-    }
-  }
-  return closest_pt;
-}
-
-/**
- * Dumps a serie of points into its own GPX file.
- */
-void dump_points(point * points, int points_count) {
-  char out_f[255];
-  int i;
-  snprintf(out_f, 255, "%s_%02d.gpx", input_file_name, anon_trk_idx++);
-  printf("dumping trace into its own file (%s) ...\n", out_f);
-  FILE * out_gpx = fopen(out_f, "w");
-  fprintf(out_gpx, "<gpx version=\"1.0\" xmlns=\"%s\" creator=\"gpx_sanitizer\">\n  <trk>\n    <trkseg>\n", GPX_NS);
-  for (i = 0; i < points_count ; i++) {
-    if (i > 0) {
-      point p1 = points[i-1], p2 = points[i];
-      float dist_between_pts = calculate_dist(p1.lat, p1.lon, p2.lat, p2.lon);
-      // Cuts the segment in 2 if necessary
-      if (dist_between_pts > DISTANCE_THRESHOLD) {
-        fprintf(out_gpx, "    </trkseg>\n    <trkseg>\n");
-      }
-      fprintf(out_gpx, "      <trkpt lat=\"%f\" lon=\"%f\" />\n", p2.lat, p2.lon);
-    }
-  }
-  fprintf(out_gpx, "      </trkseg>\n  </trk>\n</gpx>\n");
-  fclose(out_gpx);
-  return;
-}
-
-/**
- * Reorders the coordinates of a trackseg.
- */
-static int reorder_trace_coordinates(xmlNodePtr node, xmlXPathContextPtr ctx) {
-
+points_result build_point_list(xmlNodePtr node, xmlXPathContextPtr ctx) {
+  points_result ret = { NULL, 0 };
   xmlXPathObjectPtr t = xmlXPathNodeEval(node, XP_TRKPT, ctx);
-
   if ((t == NULL) || (t->nodesetval == NULL))
-    return -1;
+    return ret;
 
   linkedlist_points_p lst = NULL;
 
@@ -184,7 +75,28 @@ static int reorder_trace_coordinates(xmlNodePtr node, xmlXPathContextPtr ctx) {
     pt_ar[j].lat = tm->lat;
     pt_ar[j++].lon = tm->lon;
     tm = tm->next;
+    free(lst);
+    lst = tm;
   }
+
+  ret.points = pt_ar;
+  ret.size   = points_count;
+
+  xmlXPathFreeObject(t);
+  return ret;
+}
+
+/**
+ * Reorders the coordinates of a trackseg.
+ */
+static int reorder_trace_coordinates(xmlNodePtr node, xmlXPathContextPtr ctx) {
+
+  unsigned int points_count = 0, i,j;
+  point * pt_ar = NULL;
+
+  points_result rs = build_point_list(node, ctx);
+  points_count = rs.size;
+  pt_ar = rs.points;
 
   // Actually building the matrix
   float * mtx = malloc(sizeof(float) * points_count * points_count);
@@ -258,7 +170,9 @@ static int reorder_trace_coordinates(xmlNodePtr node, xmlXPathContextPtr ctx) {
     ordered_points_arr[i] = pt_ar[ordered_points[i]];
   }
 
-  dump_points(ordered_points_arr, idx);
+  points_result rs2 = { ordered_points_arr, idx };
+
+  dump_points(input_file_name, anon_trk_idx++, rs2);
 
   free(ordered_points_arr);
   free(ordered_points);
@@ -294,8 +208,10 @@ static int parse_trace(xmlDoc * doc)
     for (i  = 0; i < xpathObj->nodesetval->nodeNr ; i++) {
       int anonymized = is_trkseg_anonymized(xpathObj->nodesetval->nodeTab[i], xpathCtx);
       if (anonymized == 0) {
+        points_result rs = build_point_list(xpathObj->nodesetval->nodeTab[i], xpathCtx);
         printf("track %d is not anonymized, dumping it ...\n", i);
-        //build_matrix(xpathObj->nodesetval->nodeTab[i], xpathCtx);
+        dump_points(input_file_name, anon_trk_idx++, rs);
+        free(rs.points);
       }
       else if (anonymized == 1) {
         printf("track %d is anonymized, reordering points ...\n", i);
@@ -330,22 +246,29 @@ int main(int argc, char **argv)
         tmp_fn--;
     }
 
-
     LIBXML_TEST_VERSION
 
     doc = xmlReadFile(argv[1], NULL, 0);
 
     if (doc == NULL) {
-        printf("error: could not parse file %s\n", argv[1]);
+      fprintf(stderr, "error: could not parse file %s\n", argv[1]);
+      free(input_file_name);
+      return -1;
     }
 
     if (parse_trace(doc) < 0) {
       fprintf(stderr, "Error parsing %s\n", argv[1]);
+      xmlFreeDoc(doc);
+      xmlCleanupParser();
+      free(input_file_name);
+      return -2;
     }
+
+    fprintf(stdout, "<%s> parsed successfully\n", argv[1]);
+
     xmlFreeDoc(doc);
     xmlCleanupParser();
     free(input_file_name);
 
-    fprintf(stdout, "<%s> parsed successfully\n", argv[1]);
     return 0;
 }
