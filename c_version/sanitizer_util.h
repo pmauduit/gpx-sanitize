@@ -1,4 +1,4 @@
-#ifndef __LINKEDLIST_H
+#ifndef __SANITIZER_UTIL_H
 
 /*
  * simple implementation of a linked list for float elements.
@@ -34,5 +34,10 @@ typedef struct __point {
   float lon;
 } point, * point_p;
 
-#endif // __LINKEDLIST_H
+typedef struct __points_result {
+  point_p points ;
+  unsigned int size ;
+} points_result;
+
+#endif // __SANITIZER_UTIL_H
 

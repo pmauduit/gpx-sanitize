@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "linkedlist.h"
+#include "sanitizer_util.h"
 
 linkedlist_float_p new_linkedlist_float(float elem) {
   linkedlist_float_p ret = malloc(sizeof(linkedlist_float));
