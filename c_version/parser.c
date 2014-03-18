@@ -236,14 +236,15 @@ int main(int argc, char **argv)
     }
 
     // input filename, without .gpx extension
-    char *tmp_fn;
-    input_file_name = basename(strdup(argv[1]));
-    tmp_fn = input_file_name + strlen(input_file_name) - 1;
-    while ((tmp_fn != input_file_name) && (*tmp_fn != '\0')) {
-      if (*tmp_fn == '.')
-        *tmp_fn = '\0';
+    char *tmp_fn,  *t;
+    tmp_fn = strdup(argv[1]);
+    input_file_name = basename(tmp_fn);
+    t = input_file_name + strlen(input_file_name) - 1;
+    while ((t != input_file_name) && (*t != '\0')) {
+      if (*t == '.')
+        *t = '\0';
       else
-        tmp_fn--;
+        t--;
     }
 
     LIBXML_TEST_VERSION
@@ -268,7 +269,7 @@ int main(int argc, char **argv)
 
     xmlFreeDoc(doc);
     xmlCleanupParser();
-    free(input_file_name);
+    free(tmp_fn);
 
     return 0;
 }
