@@ -134,7 +134,7 @@ doc.search('//trkseg').each do |node|
 end
 
 # Note: Since the time needed to actually build the matrix, I began the C
-# implementation, and did not finished this one.
+# implementation, and did not finish this one.
 #
 
 
