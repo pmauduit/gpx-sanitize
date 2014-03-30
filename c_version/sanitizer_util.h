@@ -1,5 +1,5 @@
-#ifndef __SANITIZER_UTIL_H
-#define __SANITIZER_UTIL_H
+#ifndef SANITIZER_UTIL_H
+#define SANITIZER_UTIL_H
 
 #include <math.h>
 #include <assert.h>
@@ -74,5 +74,5 @@ const int get_minimum_index(float * mtx, int pt, int size);
 void dump_points(char * input_fname, int gpx_index, points_result rs);
 
 
-#endif // __SANITIZER_UTIL_H
+#endif // SANITIZER_UTIL_H
 
