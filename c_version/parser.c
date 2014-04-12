@@ -1,6 +1,11 @@
 #include <stdio.h>
-
 #include "sanitizer_util.h"
+
+// Force reordering: If a track is not supposedly
+// anonymized, we are supposed to dump it without
+// modifications. With FORCE_REORDERING set to 1
+// we will process it as it was anonymized.
+#define FORCE_REORDERING 1
 
 char * input_file_name = NULL;
 static unsigned int anon_trk_idx = 0;
@@ -208,10 +213,16 @@ static int parse_trace(xmlDoc * doc)
     for (i  = 0; i < xpathObj->nodesetval->nodeNr ; i++) {
       int anonymized = is_trkseg_anonymized(xpathObj->nodesetval->nodeTab[i], xpathCtx);
       if (anonymized == 0) {
-        points_result rs = build_point_list(xpathObj->nodesetval->nodeTab[i], xpathCtx);
-        printf("track %d is not anonymized, dumping it ...\n", i);
-        dump_points(input_file_name, anon_trk_idx++, rs);
-        free(rs.points);
+        if (FORCE_REORDERING) {
+          printf("track %d is not anonymized, dumping it ...\n", i);
+          reorder_trace_coordinates(xpathObj->nodesetval->nodeTab[i], xpathCtx);
+        }
+        else {
+          points_result rs = build_point_list(xpathObj->nodesetval->nodeTab[i], xpathCtx);
+          printf("track %d is not anonymized, dumping it ...\n", i);
+          dump_points(input_file_name, anon_trk_idx++, rs);
+          free(rs.points);
+        }
       }
       else if (anonymized == 1) {
         printf("track %d is anonymized, reordering points ...\n", i);
