@@ -209,6 +209,11 @@ static int parse_trace(xmlDoc * doc)
       xmlXPathFreeContext(xpathCtx);
       return -1;
     }
+    if (xpathObj->nodesetval == NULL) {
+      xmlXPathFreeContext(xpathCtx);
+      xmlXPathFreeObject(xpathObj);
+      return -1;
+    }
     int i;
     for (i  = 0; i < xpathObj->nodesetval->nodeNr ; i++) {
       int anonymized = is_trkseg_anonymized(xpathObj->nodesetval->nodeTab[i], xpathCtx);
