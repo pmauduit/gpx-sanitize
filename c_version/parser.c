@@ -13,7 +13,7 @@ static unsigned int anon_trk_idx = 0;
 const xmlChar * XP_TRKSEG     = (unsigned char *) "/gpx:gpx/gpx:trk/gpx:trkseg";
 const xmlChar * XP_TRKPT      = (unsigned char *) "gpx:trkpt";
 const xmlChar * XP_TRKPT_TIME = (unsigned char *) "gpx:trkpt/gpx:time";
-const unsigned char * GPX_NS  = (unsigned char *) "http://www.topografix.com/GPX/1/0";
+xmlChar * GPX_NS  = NULL;
 
 
 
@@ -198,7 +198,7 @@ static int parse_trace(xmlDoc * doc)
       return -1;
     }
     /* register namespace */
-    if(xmlXPathRegisterNs(xpathCtx, (xmlChar *) "gpx", GPX_NS) != 0) {
+    if(xmlXPathRegisterNs(xpathCtx, (xmlChar *) "gpx", (xmlChar *) GPX_NS) != 0) {
       fprintf(stderr,"Error: unable to register default GPX namespace (%s)\n", GPX_NS);
       xmlXPathFreeContext(xpathCtx);
       return -1;
@@ -272,12 +272,19 @@ int main(int argc, char **argv)
       free(input_file_name);
       return -1;
     }
-
+    if ((doc->children != NULL) && (doc->children->ns != NULL)
+      && (doc->children->ns->href != NULL)) {
+      GPX_NS = xmlCharStrdup((const char *) doc->children->ns->href);
+    } else {
+      GPX_NS = xmlCharStrdup("http://www.topografix.com/GPX/1/0");
+    }
     if (parse_trace(doc) < 0) {
       fprintf(stderr, "Error parsing %s\n", argv[1]);
       xmlFreeDoc(doc);
       xmlCleanupParser();
       free(input_file_name);
+      if (GPX_NS != NULL)
+        free(GPX_NS);
       return -2;
     }
 
@@ -287,5 +294,7 @@ int main(int argc, char **argv)
     xmlCleanupParser();
     free(tmp_fn);
 
+    if (GPX_NS != NULL)
+      free(GPX_NS);
     return 0;
 }
