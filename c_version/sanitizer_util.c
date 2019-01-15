@@ -89,7 +89,7 @@ float calculate_dist(float lat1, float long1, float lat2, float long2) {
 /**
  * gets the value at mtx[i][j].
  */
-inline const float get_indice(float * mtx, int i, int j, int size) {
+const float get_indice(float * mtx, int i, int j, int size) {
   return *((mtx + i * size) + j);
 }
 

@@ -69,7 +69,7 @@ static const float DTOR = M_PI / 180.0;
 static const float EARTH_RADIUS = 6378.14*1000.0;
 
 float calculate_dist(float lat1, float long1, float lat2, float long2);
-inline const float get_indice(float * mtx, int i, int j, int size);
+const float get_indice(float * mtx, int i, int j, int size);
 const int get_minimum_index(float * mtx, int pt, int size);
 void dump_points(char * input_fname, int gpx_index, points_result rs);
 
