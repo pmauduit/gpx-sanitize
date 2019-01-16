@@ -21,4 +21,4 @@ interpreted ones. Conclusion ? If you're able to write C without taking too much
 or having headaches, you should definitely consider using C.
 
 Anyway, here is the result:
-![](http://maps.qualitystreetmap.org/~pmauduit/gpx-sanitize-output.png)
+![](https://pbs.twimg.com/media/Bf5pLlrCIAAskBc.png:large)
