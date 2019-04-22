@@ -4,7 +4,7 @@ BIN:=parser
 BIN_DEP:=sanitizer_util.c parser.c
 BIN_OBJ:=$(BIN_DEP:%.c=%.o)
 
-INSTALL_DIR:=../../sanitize
+INSTALL_BIN:=../../sanitize
 
 CC=$(shell which gcc)
 GDB=$(shell which gdb)
@@ -29,14 +29,14 @@ $(BIN): $(BIN_OBJ)
 # Installation rules
 
 install: all | $(STRIP)
-	cp $(BIN) $(INSTALL_DIR)
-	$(STRIP) $(INSTALL_DIR)/$(BIN)
+	cp $(BIN) $(INSTALL_BIN)
+	$(STRIP) $(INSTALL_BIN)
 
 clean:
 	rm -f $(BIN) $(BIN_OBJ) out*.gpx
 
 uninstall: clean
-	rm -f $(INSTALL_DIR)/$(BIN)
+	rm -f $(INSTALL_BIN)
 
 # Run & Instrumentation tools rules
 run: $(BIN)
